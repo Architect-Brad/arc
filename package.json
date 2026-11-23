@@ -1,0 +1,35 @@
+{
+  "name": "arc",
+  "version": "1.9.0",
+  "description": "Streaming markdown renderer and LLM chat interface \u2014 by The Architect",
+  "author": "The Architect",
+  "main": "dist/index.js",
+  "bin": {
+    "arc": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "sql.js": "^1.14.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "markdown",
+    "terminal",
+    "llm",
+    "ollama",
+    "streaming",
+    "ansi"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

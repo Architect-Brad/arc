@@ -1,0 +1,21 @@
+[package]
+name = "arc-core"
+version = "1.3.0"
+edition = "2021"
+authors = ["The Architect"]
+description = "arc native core — zero-alloc streaming engine"
+
+[[bin]]
+name = "arc_core_rs"
+path = "src/main.rs"
+
+[[bin]]
+name = "arc_render"
+path = "src/render.rs"
+
+[profile.release]
+opt-level     = 3
+lto           = true
+codegen-units = 1
+panic         = "abort"
+strip         = true

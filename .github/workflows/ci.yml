@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # Verifies the TypeScript side: installs deps, type-checks without emitting,
+  # then produces the dist/ build output.
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npx tsc --noEmit
+      - run: npm run build
+
+  # Verifies the Rust side: builds both binaries and runs the test suite
+  # (the 75 arc_render tests; arc_core_rs has 0 tests but still builds).
+  # Uses the hosted Linux runner's default linker — no Termux/Android env vars.
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cd arc-core-rs && cargo test --release

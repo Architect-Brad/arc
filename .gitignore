@@ -1,0 +1,53 @@
+# arc hygiene — generated files, local state, and things that should never
+# end up in a commit. If it can be rebuilt or it remembers your chat history,
+# it does not belong here.
+
+# Node dependencies (npm install && npm run build — see install.sh)
+node_modules/
+
+# Build output — dist/ holds ~114 generated JS files. Rebuild, don't commit.
+dist/
+
+# Rust build artifacts. The source in arc-core-rs/src/ IS committed; target/
+# is not. (Yes, arc-core-rs/target/ is already full of them.)
+arc-core-rs/target/
+
+# Chat storage (sql.js). Your conversations are yours. Keep them off GitHub.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Local models. A .gguf is someone's life savings in disk space — never commit.
+*.gguf
+
+# Logs and crash dumps
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# /tmp scratch. Test binaries and render artifacts go here (noexec mounts
+# can't run them from the working tree). Never commit scratch space.
+/tmp/
+tmp/
+*.tmp
+*.temp
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor cruft
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# NOTE: .github/ and core/ are committed on purpose. core/ holds the native
+# binaries arc ships with. Don't add them to this file. (We've been over this.)
