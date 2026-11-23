@@ -664,3 +664,394 @@ fn main() {
         out.flush().unwrap();
     }
 }
+
+// ── Tests ──────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Extract the `type` discriminator from a tokenizer frame.
+    fn tok_type(frame: &str) -> &str { get_str(frame, "type") }
+
+    // ── Minimal JSON helpers ────────────────────────────────────────────────────
+
+    #[test]
+    fn json_escape_quotes_backslashes_and_controls() {
+        assert_eq!(json_escape("a\"b\\c\nd\te\rf"), r#""a\"b\\c\nd\te\rf""#);
+    }
+
+    #[test]
+    fn json_escape_empty_plain_and_multibyte() {
+        assert_eq!(json_escape(""), "\"\"");
+        assert_eq!(json_escape("hello"), "\"hello\"");
+        assert_eq!(json_escape("héllo 世界 🌍"), "\"héllo 世界 🌍\"");
+    }
+
+    #[test]
+    fn json_str_arr_serializes() {
+        assert_eq!(json_str_arr(&[]), "[]");
+        assert_eq!(json_str_arr(&["a".into()]), "[\"a\"]");
+        assert_eq!(json_str_arr(&["a".into(), "b c".into()]), "[\"a\",\"b c\"]");
+    }
+
+    #[test]
+    fn get_str_extracts_value_and_missing() {
+        let j = r#"{"cmd":"ping","s":"hello"}"#;
+        assert_eq!(get_str(j, "cmd"), "ping");
+        assert_eq!(get_str(j, "s"), "hello");
+        assert_eq!(get_str(j, "missing"), "");
+        assert_eq!(get_str("not json", "cmd"), "");
+    }
+
+    #[test]
+    fn get_str_owned_unescapes() {
+        let j = r#"{"s":"line1\nline2\ttab\"q\\end"}"#;
+        assert_eq!(get_str_owned(j, "s"), "line1\nline2\ttab\"q\\end");
+        assert_eq!(get_str_owned(r#"{}"#, "s"), "");
+    }
+
+    #[test]
+    fn get_int_parses_and_defaults() {
+        assert_eq!(get_int(r#"{"w":42}"#, "w", 80), 42);
+        assert_eq!(get_int(r#"{"w":-7}"#, "w", 80), -7);
+        assert_eq!(get_int(r#"{}"#, "w", 80), 80);
+        assert_eq!(get_int(r#"{"w":"x"}"#, "w", 80), 80);
+    }
+
+    #[test]
+    fn get_bool_true_false_default() {
+        assert!(get_bool(r#"{"inCode":true}"#, "inCode", false));
+        assert!(!get_bool(r#"{"inCode":false}"#, "inCode", true));
+        assert!(!get_bool(r#"{}"#, "inCode", false));
+        assert!(get_bool(r#"{}"#, "inCode", true));
+    }
+
+    // ── ANSI strip / visible length ─────────────────────────────────────────────
+
+    #[test]
+    fn strip_ansi_sgr() {
+        assert_eq!(strip_ansi("\x1b[31mred\x1b[0m"), "red");
+        assert_eq!(strip_ansi("\x1b[1m\x1b[38;2;1;2;3mhi\x1b[0m"), "hi");
+        assert_eq!(strip_ansi("\x1b[mplain"), "plain");
+    }
+
+    #[test]
+    fn strip_ansi_csi_cursor_control() {
+        // The earlier bug: only SGR (`...m`) was removed, leaving cursor-control
+        // CSI sequences behind. Final byte must be 0x40..=0x7E, not just 'm'.
+        assert_eq!(strip_ansi("\x1b[2J\x1b[Hclean"), "clean");
+        assert_eq!(strip_ansi("a\x1b[1;1Hb"), "ab");
+    }
+
+    #[test]
+    fn strip_ansi_csi_various_final_bytes() {
+        assert_eq!(strip_ansi("\x1b[2J\x1b[H\x1b[s\x1b[?25lX"), "X");
+        assert_eq!(strip_ansi("\x1b[?1049h\x1b[?1049lY"), "Y");
+    }
+
+    #[test]
+    fn strip_ansi_osc_bel_and_st() {
+        assert_eq!(strip_ansi("\x1b]0;title\x07body"), "body");
+        assert_eq!(strip_ansi("\x1b]0;title\x1b\\body"), "body");
+        assert_eq!(strip_ansi("x\x1b]8;;url\x07link\x1b]8;;\x07z"), "xlinkz");
+    }
+
+    #[test]
+    fn strip_ansi_no_ansi_passthrough() {
+        assert_eq!(strip_ansi(""), "");
+        assert_eq!(strip_ansi("plain text 123"), "plain text 123");
+        assert_eq!(strip_ansi("a\nb\tc"), "a\nb\tc");
+    }
+
+    #[test]
+    fn strip_ansi_mixed_multibyte_and_ansi() {
+        assert_eq!(strip_ansi("\x1b[1m世界\x1b[0m 🌍 \x1b[2Jok"), "世界 🌍 ok");
+        assert_eq!(strip_ansi("héllo \x1b[32m✓\x1b[0m"), "héllo ✓");
+    }
+
+    #[test]
+    fn strip_ansi_edges() {
+        // Lone trailing ESC is preserved; a non-CSI/non-OSC ESC sequence is a
+        // two-byte escape (e.g. ESC 7 = save cursor).
+        assert_eq!(strip_ansi("a\x1b"), "a\x1b");
+        assert_eq!(strip_ansi("a\x1b7b"), "ab");
+    }
+
+    #[test]
+    fn utf8_char_len_and_visible_length() {
+        assert_eq!(utf8_char_len(b'a'), 1);
+        assert_eq!(utf8_char_len(0xC3), 2); // leading byte of 'é'
+        assert_eq!(utf8_char_len(0xE4), 3); // leading byte of '世'
+        assert_eq!(utf8_char_len(0xF0), 4); // leading byte of '🌍'
+
+        assert_eq!(visible_length("\x1b[31mabc\x1b[0m"), 3);
+        assert_eq!(visible_length("世界"), 2);
+        assert_eq!(visible_length(""), 0);
+    }
+
+    // ── Word wrap / token estimate ──────────────────────────────────────────────
+
+    #[test]
+    fn wrap_text_respects_width() {
+        assert_eq!(wrap_text("one two three four", 7), ["one two", "three", "four"]);
+        assert_eq!(wrap_text("a b c", 1), ["a", "b", "c"]);
+    }
+
+    #[test]
+    fn wrap_text_zero_width_defaults_80() {
+        assert_eq!(wrap_text("a b c", 0), ["a b c"]);
+        assert_eq!(wrap_text("", 10), Vec::<String>::new());
+    }
+
+    #[test]
+    fn estimate_tokens_basic() {
+        assert_eq!(estimate_tokens(""), 0);
+        assert_eq!(estimate_tokens("abc"), 1);
+        assert_eq!(estimate_tokens(&"a".repeat(38)), 10);
+        assert_eq!(estimate_tokens(&"a".repeat(39)), 11);
+    }
+
+    // ── Language resolution / keyword tables ────────────────────────────────────
+
+    #[test]
+    fn resolve_lang_aliases() {
+        assert_eq!(resolve_lang("js"), "javascript");
+        assert_eq!(resolve_lang("javascript"), "javascript");
+        assert_eq!(resolve_lang("ts"), "typescript");
+        assert_eq!(resolve_lang("py"), "python");
+        assert_eq!(resolve_lang("rs"), "rust");
+        assert_eq!(resolve_lang("sh"), "bash");
+        assert_eq!(resolve_lang("shell"), "bash");
+        assert_eq!(resolve_lang("cpp"), "c");
+        assert_eq!(resolve_lang("c++"), "c");
+        assert_eq!(resolve_lang("go"), "go");
+        assert_eq!(resolve_lang("java"), "java");
+        assert_eq!(resolve_lang("sql"), "sql");
+    }
+
+    #[test]
+    fn resolve_lang_unknown_and_case() {
+        assert_eq!(resolve_lang("JS"), "javascript");
+        assert_eq!(resolve_lang("PyThOn"), "python");
+        assert_eq!(resolve_lang("unknown"), "plain");
+        assert_eq!(resolve_lang(""), "plain");
+        assert!(keywords_for("plain").is_empty());
+    }
+
+    #[test]
+    fn keywords_for_known_languages() {
+        assert!(keywords_for("javascript").contains(&"const"));
+        assert!(keywords_for("python").contains(&"def"));
+        assert!(keywords_for("rust").contains(&"fn"));
+        assert!(keywords_for("cpp").contains(&"class"));
+        assert!(keywords_for("sql").contains(&"SELECT"));
+    }
+
+    // ── Syntax highlighter ──────────────────────────────────────────────────────
+
+    #[test]
+    fn highlight_keywords_numbers_operators() {
+        let h = highlight("const x = 1;", "js");
+        assert!(h.starts_with(C_PL));
+        assert!(h.ends_with(RST));
+        assert!(h.contains(&format!("{}const{}", C_KW, C_PL)));
+        assert!(h.contains(&format!("{}1{}", C_NUM, C_PL)));
+        assert!(h.contains(&format!("{}={}", C_OP, C_PL)));
+    }
+
+    #[test]
+    fn highlight_string_literal() {
+        let h = highlight("let s = \"hello\";", "js");
+        assert!(h.contains(&format!("{}\"hello\"{}", C_STR, C_PL)));
+    }
+
+    #[test]
+    fn highlight_comment_line() {
+        let js = highlight("// note", "js");
+        assert!(js.contains(C_CMT));
+        assert!(js.contains("// note"));
+        // `cpp` resolves to `c`, which also uses `//` comments.
+        assert!(highlight("// note", "cpp").contains(C_CMT));
+        // SQL uses `--`.
+        assert!(highlight("-- note", "sql").contains(C_CMT));
+    }
+
+    #[test]
+    fn highlight_python_multiline() {
+        let h = highlight("# c\ndef f():", "py");
+        assert!(h.contains(C_CMT));
+        assert!(h.contains(&format!("{}def{}", C_KW, C_PL)));
+        assert!(h.contains('\n'));
+    }
+
+    #[test]
+    fn highlight_multibyte_does_not_panic() {
+        let h = highlight("世界 🌍 — const", "js");
+        assert!(h.contains("世界"));
+        assert!(h.contains("🌍"));
+        assert!(h.contains(&format!("{}const{}", C_KW, C_PL)));
+    }
+
+    #[test]
+    fn highlight_multibyte_inside_string() {
+        let h = highlight("\"héllo 世界\"", "js");
+        assert!(h.contains(&format!("{}\"héllo 世界\"{}", C_STR, C_PL)));
+    }
+
+    // ── Markdown tokenizer ──────────────────────────────────────────────────────
+
+    #[test]
+    fn tokenize_blank_and_paragraph() {
+        assert_eq!(tok_type(&tokenize_line("", false)), "blank");
+        assert_eq!(tok_type(&tokenize_line("  ", false)), "blank");
+        let p = tokenize_line("hello world", false);
+        assert_eq!(tok_type(&p), "paragraph");
+        assert_eq!(get_str(&p, "text"), "hello world");
+    }
+
+    #[test]
+    fn tokenize_heading_levels() {
+        let h = tokenize_line("### Sub", false);
+        assert_eq!(tok_type(&h), "heading");
+        assert_eq!(get_int(&h, "level", 0), 3);
+        assert_eq!(get_str(&h, "text"), "Sub");
+        // Seven hashes is not a valid heading.
+        assert_ne!(tok_type(&tokenize_line("####### nope", false)), "heading");
+    }
+
+    #[test]
+    fn tokenize_hr_and_blockquote() {
+        for hr in ["---", "***", "___", "===", "- - -", "* * *"] {
+            assert_eq!(tok_type(&tokenize_line(hr, false)), "hr", "hr: {hr}");
+        }
+        let q = tokenize_line("> quoted", false);
+        assert_eq!(tok_type(&q), "blockquote");
+        assert_eq!(get_str(&q, "text"), "quoted");
+    }
+
+    #[test]
+    fn tokenize_lists() {
+        let ul = tokenize_line("- item", false);
+        assert_eq!(tok_type(&ul), "ul_item");
+        assert_eq!(get_str(&ul, "text"), "item");
+        assert_eq!(get_int(&ul, "depth", -1), 0);
+
+        let nested = tokenize_line("  * nested", false);
+        assert_eq!(tok_type(&nested), "ul_item");
+        assert_eq!(get_int(&nested, "depth", -1), 1);
+
+        let ol = tokenize_line("3. third", false);
+        assert_eq!(tok_type(&ol), "ol_item");
+        assert_eq!(get_int(&ol, "level", 0), 3);
+        assert_eq!(get_str(&ol, "text"), "third");
+        assert!(get_bool(&ol, "ordered", false));
+    }
+
+    #[test]
+    fn tokenize_table_rows_and_sep() {
+        let row = tokenize_line("| a | b |", false);
+        assert_eq!(tok_type(&row), "table_row");
+        let sep = tokenize_line("|---|---|", false);
+        assert_eq!(tok_type(&sep), "table_sep");
+    }
+
+    #[test]
+    fn tokenize_code_fence_states() {
+        let open = tokenize_line("```rust", false);
+        assert_eq!(tok_type(&open), "code_open");
+        assert_eq!(get_str(&open, "lang"), "rust");
+
+        let line = tokenize_line("let x = 1;", true);
+        assert_eq!(tok_type(&line), "code_line");
+        assert_eq!(get_str(&line, "text"), "let x = 1;");
+
+        let close = tokenize_line("```", true);
+        assert_eq!(tok_type(&close), "code_close");
+    }
+
+    #[test]
+    fn tokenize_text_is_json_escaped() {
+        let p = tokenize_line("say \"hi\"", false);
+        assert_eq!(get_str_owned(&p, "text"), "say \"hi\"");
+    }
+
+    // ── Context tracker bar ─────────────────────────────────────────────────────
+
+    #[test]
+    fn context_bar_colors_and_counts() {
+        let ctx = ContextTracker { used: 50, max: 100, model: String::new() };
+        let bar = ctx.bar(10);
+        assert!(bar.contains("\x1b[38;2;134;239;172m")); // green (< 60%)
+        assert!(bar.contains("█████"));
+        assert!(bar.contains("░░░░░"));
+        assert!(bar.contains("50/100 tokens"));
+        assert!(bar.contains("50%"));
+
+        let hot = ContextTracker { used: 90, max: 100, model: String::new() };
+        assert!(hot.bar(10).contains("\x1b[38;2;248;113;113m")); // red (>= 85%)
+    }
+
+    #[test]
+    fn context_bar_zero_max() {
+        assert_eq!(ContextTracker { used: 0, max: 0, model: String::new() }.bar(40), "");
+    }
+
+    // ── Protocol dispatcher (pure, no stdout/IPC involved) ──────────────────────
+
+    #[test]
+    fn process_ping_and_unknown() {
+        let mut ctx = ContextTracker::default();
+        assert_eq!(process("ping", "", &mut ctx), r#"{"r":"pong","engine":"rust"}"#);
+        assert_eq!(process("nope", "", &mut ctx), r#"{"error":"unknown cmd"}"#);
+        assert_eq!(process("", "", &mut ctx), r#"{"error":"unknown cmd"}"#);
+    }
+
+    #[test]
+    fn process_strip_and_visible_length() {
+        let mut ctx = ContextTracker::default();
+        let json = format!(r#"{{"s":"{}red{} 世界"}}"#, "\x1b[31m", "\x1b[0m");
+        assert_eq!(process("stripAnsi", &json, &mut ctx), r#"{"r":"red 世界"}"#);
+        assert_eq!(process("visibleLength", &json, &mut ctx), r#"{"r":6}"#);
+    }
+
+    #[test]
+    fn process_batch_and_empty() {
+        let mut ctx = ContextTracker::default();
+        let j = r#"{"ops":[{"cmd":"ping"},{"cmd":"stripAnsi","s":"plain"}]}"#;
+        assert_eq!(
+            process("batch", j, &mut ctx),
+            r#"{"results":[{"r":"pong","engine":"rust"},{"r":"plain"}]}"#
+        );
+        assert_eq!(process("batch", r#"{}"#, &mut ctx), r#"{"results":[]}"#);
+    }
+
+    #[test]
+    fn process_context_state() {
+        let mut ctx = ContextTracker::default();
+        let set = r#"{"cmd":"contextSet","used":10,"max":100,"model":"m"}"#;
+        assert_eq!(process("contextSet", set, &mut ctx), r#"{"r":true,"pct":0.10}"#);
+        assert_eq!(process("contextAdd", r#"{"tokens":15}"#, &mut ctx),
+                   r#"{"r":true,"used":25,"pct":0.25}"#);
+        assert!(process("contextBar", r#"{"w":10}"#, &mut ctx).contains("25/100 tokens"));
+    }
+
+    #[test]
+    fn protocol_frames_valid_and_malformed() {
+        let mut ctx = ContextTracker::default();
+
+        // Mirrors main(): extract "cmd", then dispatch the whole line.
+        let valid = r#"{"cmd":"ping"}"#;
+        let cmd = get_str(valid, "cmd");
+        assert_eq!(cmd, "ping");
+        assert_eq!(process(cmd, valid, &mut ctx), r#"{"r":"pong","engine":"rust"}"#);
+
+        // Malformed / cmd-less frames are answered with the error frame,
+        // so the persistent child never dies on a bad line.
+        for line in [r#"{"foo":"bar"}"#, "not json", "{}"] {
+            let cmd = get_str(line, "cmd");
+            assert_eq!(cmd, "");
+            assert_eq!(process(cmd, line, &mut ctx), r#"{"error":"unknown cmd"}"#);
+        }
+    }
+}

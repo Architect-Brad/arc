@@ -297,7 +297,7 @@ knows they happened. This is probably fine.
 
 ## The Rust core
 
-`core/arc_core_rs` — compiled Rust, 450 lines, ships with arc.
+`core/arc_core_rs` — compiled Rust, ships with arc.
 
 Handles the streaming hot path: ANSI measurement, markdown tokenizer,
 syntax highlighter state machine, word wrapper, context window tracker.
@@ -476,12 +476,13 @@ changes. Dependencies have their own bugs. Arc has its own bugs.
 At least we know where they are.
 
 **On Termux:**
-The Architect does not own an Android device. The Termux support was
-added on principle. It probably works. The key insight is that Termux
-is just Linux with a different path layout (`$PREFIX` instead of `/usr`)
-and no systemd. `install.sh` detects `$TERMUX_VERSION` and adjusts.
-The web UI definitely works — it's just HTTP. The rest is probably fine.
-Report issues if it isn't.
+The Architect still does not own an Android device. He does have reports
+from the field now — arc has been used on Termux with real LFM2.5 models,
+and it holds up. The key insight is that Termux is just Linux with a
+different path layout (`$PREFIX` instead of `/usr`) and no systemd.
+`install.sh` detects `$TERMUX_VERSION` and adjusts. The web UI works —
+it's just HTTP. The rest is fine too, apparently. He's still not buying
+a phone. Field reports and bug reports both welcome.
 
 **On the easter eggs:**
 Yes, there's a matrix animation. Yes, there's a speedrun. Yes, typing
@@ -492,7 +493,7 @@ No further comment.
 
 **On shipping:**
 arc started as a weekend project. It is now 7,500+ lines of TypeScript,
-Rust, and C++ across 30 source files. It has three backends, two native
+Rust, and C++ across 35 source files. It has three backends, two native
 cores, a web UI, a benchmark suite, a persona system, and easter eggs.
 The original goal was "render markdown from ollama output."
 That goal was achieved in version 0.1.
@@ -779,7 +780,7 @@ arc works on Android via Termux. There are rules.
 
 ```bash
 # Correct
-~/arc-v1.8.0/
+~/arc/
 
 # Wrong — will fail with permission errors
 /sdcard/arc/
@@ -828,7 +829,8 @@ This is genuinely useful. It also feels slightly illegal. It isn't.
 - Shell hooks work in bash and zsh (Termux ships both)
 - The Rust core compiles with `pkg install rust` — first compile is slow on
   older phones, subsequent builds are cached
-- Node.js via `pkg install nodejs-lts` (not `nodejs` — LTS is more stable)
+- Node.js via `pkg install nodejs` (or `nodejs-lts` if you prefer the
+  slower-moving build — the installer mentions it too)
 
 ### iOS — Termux doesn't exist there
 

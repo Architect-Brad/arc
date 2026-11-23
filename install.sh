@@ -74,7 +74,7 @@ if $IS_TERMUX; then
     echo -e "  ${S}Required: somewhere inside ${TERMUX_HOME}/${E}"
     echo ""
     echo -e "  Move arc to your home directory and re-run:"
-    echo -e "  ${V}mv "${SCRIPT_DIR}" ~/arc && cd ~/arc && bash install.sh${E}"
+    echo -e "  ${V}mv \"${SCRIPT_DIR}\" ~/arc && cd ~/arc && bash install.sh${E}"
     echo ""
     exit 1
   fi

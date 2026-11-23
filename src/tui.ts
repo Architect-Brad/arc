@@ -186,7 +186,10 @@ export async function chatLoop(
           if (history.length >= 1) {
             const lastUser = [...history].reverse().find(m => m.role === 'user');
             if (lastUser) {
-              if (history[history.length-1]?.role === 'assistant') history.pop();
+              if (history[history.length-1]?.role === 'assistant') {
+                history.pop();
+                storage.deleteTrailingAssistant(chat.id);
+              }
               const resp = await streamResponse(rm, history, lastUser.content, [], hasThinking, storage, chat.id, generation);
               if (resp) { history.push({ role: 'assistant', content: resp }); lastResponse = resp; }
             }

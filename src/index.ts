@@ -46,7 +46,7 @@ const opt  = (f: string): string | undefined => { const i = args.indexOf(`--${f}
 if (has('version')) {
   console.log(`\n${v}${b}${NAME}${r}  ${sd}v${VERSION}${r}`);
   console.log(`${sd}Built by ${r}${v}${b}${AUTHOR}${r}`);
-  console.log(`${sd}Linux · KDE · Zero dependencies${r}\n`);
+  console.log(`${sd}Linux · KDE · One dependency${r}\n`);
   process.exit(0);
 }
 

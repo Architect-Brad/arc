@@ -253,6 +253,23 @@ export class ChatStorage {
     return msg;
   }
 
+  // Drop the newest assistant row for a chat — /retry supersedes the last
+  // reply, so the old one must not linger and duplicate on /export.
+  // No-op when the chat has no assistant rows.
+  deleteTrailingAssistant(chatId: string): void {
+    if (!this.available()) return;
+    this.db.run(
+      `DELETE FROM messages WHERE id = (
+         SELECT id FROM messages
+         WHERE chat_id=? AND role='assistant'
+         ORDER BY created_at DESC, rowid DESC
+         LIMIT 1
+       )`,
+      [chatId]
+    );
+    this.dirty = true;
+  }
+
   getMessages(chatId: string): Message[] {
     if (!this.available()) return [];
     const stmt = this.db.prepare(

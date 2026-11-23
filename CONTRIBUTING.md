@@ -87,5 +87,6 @@ win you over.
    `git tag -a vX.Y.Z -m "arc vX.Y.Z: one-line summary"`
 5. Push the commit and tag: `git push && git push --tags`.
 6. Create the GitHub Release from the tag with `gh release create vX.Y.Z
-   --generate-notes`, or write notes by hand if the commit history is too
-   honest for public consumption.
+   --notes-file <file>` — the README release notes section is good raw
+   material. `--generate-notes` also works, if the commit history is ever
+   honest enough for public consumption.
