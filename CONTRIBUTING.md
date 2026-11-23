@@ -76,3 +76,16 @@ Small, focused, and explain what broke. "It didn't work" is a start; "typing
 `arc --pipe` on a noexec mount crashed, so I added the TS fallback" is a patch
 we can merge. The Architect has strong opinions. Be correct, and they usually
 win you over.
+
+## Releasing
+
+1. Bump the version in `package.json`, `package-lock.json`, and `VERSION` in
+   `src/index.ts`.
+2. Add release notes under `## Release notes` in `README.md`. Keep the jokes.
+3. Rebuild `dist/` (not committed, but the release should be built clean).
+4. Commit, then tag with an annotated tag:
+   `git tag -a vX.Y.Z -m "arc vX.Y.Z: one-line summary"`
+5. Push the commit and tag: `git push && git push --tags`.
+6. Create the GitHub Release from the tag with `gh release create vX.Y.Z
+   --generate-notes`, or write notes by hand if the commit history is too
+   honest for public consumption.

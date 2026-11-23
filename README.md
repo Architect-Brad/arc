@@ -528,6 +528,14 @@ Magnificent, necessary scope creep.
 - `--pipe` / `--render` use it automatically; falls back to the TS renderer
   silently on Termux and unusual mounts
 
+**Generation parameters that actually do something**
+- `/temp`, `/top-p`, `/seed` and `/gen` now reach all three backends — Ollama
+  as `options`, llama-server as top-level JSON, llama-cli as flags. `/temp`
+  was previously a no-op: it took your number, thanked you, and threw it away
+- Values are session-scoped, survive `/retry`, and can be seeded from config
+- Hooked CLI calls go through `--pipe` and are unaffected. They generate
+  nothing. This is by design, not an oversight
+
 **Fixes**
 - `--speed` is now honored for `--pipe` / `--render` (was parsed, never applied)
 - ANSI stripping no longer leaks cursor-control sequences (CSI final bytes)
@@ -536,6 +544,12 @@ Magnificent, necessary scope creep.
 - Wide tables: cells now word-wrap across multiple display rows instead of
   hiding overflowing columns
 - `config set defaults.ollamaHost` actually works (backend reads it)
+- `arc_render` gained 75 unit tests and survived a multi-byte input panic.
+  Divider widths and table wrapping now match the TS renderer, right down to
+  the pixels we can measure
+- Post-removal cleanup: dead backend references, unused imports, and stale
+  help text purged. `config set` now preserves declared types instead of
+  turning everything into a string
 
 ### v1.7.0
 - Per-character typewriter mode (`/typing char`) — ANSI-safe, each unit atomic
