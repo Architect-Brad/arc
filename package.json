@@ -22,11 +22,21 @@
   },
   "keywords": [
     "markdown",
+    "markdown-renderer",
     "terminal",
+    "tui",
+    "cli",
     "llm",
+    "local-llm",
     "ollama",
+    "llama-cpp",
     "streaming",
-    "ansi"
+    "ansi",
+    "termux",
+    "android",
+    "offline-ai",
+    "rust",
+    "typescript"
   ],
   "license": "MIT",
   "engines": {
