@@ -20,6 +20,7 @@ import { config, handleConfigCmd } from './config';
 import { benchmarkMode }              from './benchmark';
 import { serveMode }      from './serve';
 import { ansi } from './ansi';
+import { arcLogo } from './arcart';
 import { getWikiPath, wikiExists } from './wiki';
 
 const NAME    = 'arc';
@@ -51,6 +52,14 @@ if (has('version')) {
   process.exit(0);
 }
 
+// ── --logo ────────────────────────────────────────────────────────────────────
+// The diamond was considered. We all agreed it needed a hobby instead.
+if (has('logo') || args[0] === 'logo') {
+  const ascii = has('ascii') || has('no-color');
+  process.stdout.write(`${arcLogo({ ascii })}\n`);
+  process.exit(0);
+}
+
 // ── --help ────────────────────────────────────────────────────────────────────
 if (has('help') || has('h')) {
   const ln = `${v}${'─'.repeat(W() - 1)}${r}`;
@@ -75,6 +84,7 @@ ${vl}${b}USAGE${r}
   ${v}arc${r} ${sl}--status${r}                  Show installation status
   ${v}arc${r} ${sl}--backends${r}                List detected backends + models
   ${v}arc${r} ${sl}--version${r}                 Print version and author
+  ${v}arc${r} ${sl}--logo${r}                    Print the logo (diamonds need not apply)
   ${v}arc${r} ${sl}--help${r}                    Show this help
 
 ${ln}

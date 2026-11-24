@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="icon-title icon-desc">
+  <title id="icon-title">arc</title>
+  <desc id="icon-desc">A square app icon: a violet terminal arch enclosing a small green prompt caret.</desc>
+
+  <defs>
+    <linearGradient id="icon-band" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366F1"/>
+      <stop offset="0.55" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M 24 84 A 40 40 0 0 1 104 84"
+        fill="none" stroke="url(#icon-band)" stroke-width="18"
+        stroke-linecap="round"/>
+  <path d="M 44 84 A 20 20 0 0 1 84 84"
+        fill="none" stroke="#A78BFA" stroke-width="9"
+        stroke-linecap="round"/>
+  <path d="M 28 99 H 100"
+        stroke="#94A3B8" stroke-width="3"
+        stroke-linecap="round" opacity="0.5"/>
+  <rect x="60.5" y="66" width="7" height="20" rx="3" fill="#86EFAC"/>
+</svg>

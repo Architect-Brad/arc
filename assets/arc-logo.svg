@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200" viewBox="0 0 600 200" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">arc</title>
+  <desc id="logo-desc">The arc wordmark: a layered violet terminal arch with a dotted stream, the monospace-derived word arc, and a small green prompt caret.</desc>
+
+  <defs>
+    <linearGradient id="arc-band" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366F1"/>
+      <stop offset="0.55" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="arc-word" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#6366F1"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(12 0)">
+    <!-- outer signal arc: a quietly streaming dotted halo -->
+    <path d="M 83 150 A 88 88 0 0 1 259 150"
+          fill="none" stroke="#94A3B8" stroke-width="3"
+          stroke-linecap="round" stroke-dasharray="1 11" opacity="0.6"/>
+
+    <!-- the arch: a single terminal band, indigo to light violet -->
+    <path d="M 107 150 A 64 64 0 0 1 235 150"
+          fill="none" stroke="url(#arc-band)" stroke-width="20"
+          stroke-linecap="round"/>
+    <path d="M 139 150 A 32 32 0 0 1 203 150"
+          fill="none" stroke="#A78BFA" stroke-width="9"
+          stroke-linecap="round" opacity="0.95"/>
+
+    <!-- stream crossing from the mark into the word -->
+    <circle cx="266" cy="106" r="3" fill="#94A3B8" opacity="0.85"/>
+    <circle cx="278" cy="106" r="2" fill="#94A3B8" opacity="0.45"/>
+
+    <!-- wordmark: outlined from a bold monospace face, tightly tracked -->
+    <path fill="url(#arc-word)"
+          d="M327.91 124.26Q319.27 124.26 315.84 126.48Q312.41 128.69 312.41 134.07Q312.41 138.08 314.78 140.45Q317.16 142.82 321.22 142.82Q327.33 142.82 330.71 138.21Q334.08 133.6 334.08 125.32V124.26ZM349.43 118.3V152H334.08V145.41Q331.29 149.31 326.91 151.42Q322.54 153.53 317.26 153.53Q307.19 153.53 301.57 148.2Q295.96 142.88 295.96 133.33Q295.96 123 302.65 118.07Q309.35 113.13 323.38 113.13H334.08V110.55Q334.08 106.81 331.37 104.88Q328.65 102.96 323.38 102.96Q317.84 102.96 312.65 104.35Q307.45 105.75 301.81 108.81V95.63Q306.93 93.52 312.2 92.52Q317.47 91.51 323.38 91.51Q337.78 91.51 343.6 97.37Q349.43 103.22 349.43 118.3Z
+             M409.7 109.23Q407.17 106.91 403.76 105.75Q400.36 104.59 396.3 104.59Q391.4 104.59 387.73 106.31Q384.07 108.02 382.06 111.29Q380.8 113.29 380.3 116.14Q379.8 118.99 379.8 124.79V152H364.35V92.94H379.8V102.11Q382.06 97.05 386.76 94.28Q391.45 91.51 397.73 91.51Q400.89 91.51 403.92 92.28Q406.96 93.04 409.7 94.52Z
+             M462.95 148.99Q459.05 151.26 454.57 152.4Q450.08 153.53 444.92 153.53Q431.26 153.53 423.56 145.3Q415.86 137.08 415.86 122.52Q415.86 107.91 423.61 99.66Q431.36 91.41 445.02 91.41Q449.77 91.41 454.17 92.52Q458.57 93.62 462.95 95.94V110.08Q459.58 107.18 455.54 105.62Q451.51 104.06 447.18 104.06Q439.64 104.06 435.58 108.86Q431.52 113.66 431.52 122.52Q431.52 131.38 435.58 136.13Q439.64 140.87 447.18 140.87Q451.67 140.87 455.57 139.37Q459.47 137.87 462.95 134.81Z"/>
+    <path d="M 291 170 H 463"
+          stroke="#94A3B8" stroke-width="3"
+          stroke-linecap="round" opacity="0.4"/>
+
+    <!-- prompt caret -->
+    <rect x="479" y="82" width="14" height="72" rx="3" fill="#86EFAC"/>
+  </g>
+</svg>

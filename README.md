@@ -1,12 +1,35 @@
 [![CI](https://github.com/Architect-Brad/arc/actions/workflows/ci.yml/badge.svg)](https://github.com/Architect-Brad/arc/actions/workflows/ci.yml)
 
-# arc ◈
+# arc
 
 **The terminal LLM platform nobody asked for but everyone needed.**
 
 Built by The Architect. Runs on Linux. Runs on Android. Looks better than your IDE.
 Ships with easter eggs. Has had four input box rewrites. Is not finished.
 Will never be finished. Is shipping anyway.
+
+### Branding
+
+arc draws its own face now: a curved bridge over a block-letter `arc`, with a
+green prompt caret and a tagline. Run `arc --logo` for the ANSI version, or
+`arc logo --ascii` for the plain-ASCII one that works in any terminal. A single
+diamond glyph was considered for the job and politely shown the door — it kept
+staring at people and never said anything useful. No emojis were invited back.
+
+```
+|======================================================|
+|                    ______________                    |
+|               __/                  \__               |
+|             /                          \             |
+|            |    ####   #####    #####   |            |
+|            |   ##  ##  ##  ##  ##       |            |
+|            |   ######  #####   ##    >_ |            |
+|            |   ##  ##  ##  ##  ##       |            |
+|            |   ##  ##  ##  ##   #####   |            |
+|             \__________________________/             |
+|                terminal llm platform                 |
+|======================================================|
+```
 
 ---
 
@@ -104,6 +127,8 @@ arc serve                    # web UI at http://localhost:7070
 arc benchmark --suite full   # find your fastest model
 arc config                   # show configuration
 arc wiki                     # read the manual you actually have
+arc --logo                   # print the logo (diamonds need not apply)
+arc logo --ascii             # same logo, no color, any terminal
 arc --help                   # the full list
 ```
 
