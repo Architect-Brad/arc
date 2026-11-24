@@ -52,8 +52,14 @@ and nobody stops you.
 
 ## Install
 
+**Prerequisites:** Node.js 18 or newer. You also need *something that runs
+models* — Ollama, `llama-server`, or `llama-cli`. arc renders and manages
+those; it does not ship a model. Pick a backend, then install arc.
+
 **Linux / KDE:**
 ```bash
+git clone https://github.com/Architect-Brad/arc.git arc
+cd arc
 bash install.sh
 source ~/.bashrc
 ```
