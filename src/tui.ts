@@ -15,6 +15,9 @@ import { getPersona, getAllPersonas, printPersonaList, createPersonaTemplate } f
 import { checkEasterEgg } from './easter';
 import { maybeCompress, estimateHistoryTokens } from './compress';
 import { config, handleConfigCmd } from './config';
+import { getJoke } from './jokes';
+import { openSettings } from './settings';
+import { readWiki } from './wiki';
 import {
   GLYPHS, BADGE_COLORS,
 } from './logos';
@@ -88,30 +91,49 @@ function printAssistantLabel(rm: ResolvedModel): void {
 
 function printHelp(): void {
   const w = W();
+  const section = (title: string) =>
+    `${V}── ${VL}${b}${title}${R} ${SD}${'─'.repeat(Math.max(0, w - title.length - 5))}${R}`;
+  const note = (s: string) => `  ${SD}${s}${R}`;
+
   console.log();
-  console.log(`${V}── ${VL}${b}Slash Commands${R} ${SD}${'─'.repeat(Math.max(0, w - 18))}${R}`);
+  console.log(section('Getting started'));
+  console.log(note('Just type to talk. Pick a model once, then chat till the cows come home.'));
+  console.log(`  ${V}/help${R} ${SD}this list${R}  ${V}/clear${R} ${SD}fresh context${R}  ${V}/model${R} ${SD}switch model${R}  ${V}/exit${R} ${SD}call it a night${R}`);
+  console.log(note('Everything at your disposal:'));
   SLASH_COMMANDS.forEach(c =>
     console.log(`  ${V}/${c.name.padEnd(10)}${R}  ${SD}${c.desc}${R}`));
-  console.log(`  ${SD}Generation: ${V}/temp <0-2>${R} · ${V}/top-p <0-1>${R} · ${V}/seed <int>${R} · ${V}/gen${R} ${SD}(session only)${R}`);
   console.log();
-  console.log(`${V}── ${VL}${b}@-Commands${R} ${SD}${'─'.repeat(Math.max(0, w - 14))}${R}`);
-  [
-    ['@file:path',  "Attach file contents"],
-    ['@url:https…', "Fetch and attach URL"],
-    ['@paste',      "Paste clipboard"],
-    ['@cwd',        "Attach directory tree"],
-    ['@system:…',   "Set system context"],
-  ].forEach(([cmd, desc]) =>
-    console.log(`  ${YW}${(cmd as string).padEnd(16)}${R}  ${SD}${desc}${R}`));
+
+  console.log(section('Generation'));
+  console.log(note('Dials for this session only — the models take the blame.'));
+  console.log(`  ${V}/temp <0-2>${R}  ${V}/top-p <0-1>${R}  ${V}/seed <int>${R}  ${V}/gen${R}  ${SD}(show current)${R}`);
+  console.log(`  ${V}/retry${R} ${SD}resend last message${R}  ${V}/undo${R} ${SD}drop last exchange${R}  ${V}/tokens${R} ${SD}context used${R}`);
   console.log();
-  console.log(`${V}── ${VL}${b}Code Block Keys${R} ${SD}${'─'.repeat(Math.max(0, w - 19))}${R}`);
-  console.log(`  ${GR}[r]${R} run  ${CY}[c]${R} copy  ${SD}[s] save  [↵] continue${R}`);
+
+  console.log(section('Settings & wiki'));
+  console.log(note('Make the place yours; the manual came with the box.'));
+  console.log(`  ${V}/settings${R} ${SD}open the settings pane${R}`);
+  console.log(`  ${V}/wiki${R}     ${SD}read the manual${R}  ${V}/joke${R} ${SD}a laugh on the house${R}`);
+  console.log(`  ${V}/config${R}   ${SD}show or change config${R}  ${V}/persona${R} ${SD}change the voice${R}`);
   console.log();
-  console.log(`${V}── ${VL}${b}Personas${R} ${SD}${'─'.repeat(Math.max(1, W() - 12))}${R}`);
+
+  console.log(section('Backends'));
+  console.log(note('Lock one at startup with --backend <id>, or hop around with /model.'));
+  console.log(`  ${V}ollama${R}    ${SD}local models via Ollama (port 11434)${R}`);
+  console.log(`  ${V}llamacpp${R}  ${SD}llama-server (port 8080, auto-spawns)${R}`);
+  console.log(`  ${V}llamacli${R}  ${SD}one-shot pipe mode via llama-cli${R}`);
+  console.log();
+
+  console.log(section('Tips'));
+  console.log(`  ${YW}@file:path${R}    ${SD}attach a file${R}  ${YW}@url:https...${R}  ${SD}fetch a page${R}`);
+  console.log(`  ${YW}@paste${R}       ${SD}clipboard${R}     ${YW}@cwd${R}            ${SD}directory tree${R}`);
+  console.log(`  ${YW}@system:...${R}  ${SD}inline system note${R}`);
+  console.log(`  ${GR}[r]${R} run  ${CY}[c]${R} copy  ${SD}[s] save  [enter] continue  ${SD}(inside code blocks)${R}`);
+  console.log(note('Personas: /persona list to browse, /persona new <name> to make your own.'));
   getAllPersonas().slice(0, 6).forEach(p =>
     console.log(`  ${V}${p.icon.padEnd(5)}${R} ${VL}/persona ${p.name.padEnd(12)}${R} ${SD}${p.description}${R}`)
   );
-  console.log(`  ${SD}All: ${V}/persona list${R}  Create: ${V}/persona new <name>${R}`);
+  console.log(note('All: /persona list  Create: /persona new <name>'));
   console.log();
 }
 
@@ -141,6 +163,12 @@ export async function chatLoop(
   const chat = storage.createChat(rm.backend.info.id, rm.model.id);
   printChatHeader(rm, chat.title);
 
+  // A little levity now and then, unless the user asked for a serious room.
+  if (config.get().ui.jokes !== false && Math.random() < 0.28) {
+    console.log(`  ${VL}*${R} ${SD}${getJoke()}${R}`);
+    console.log();
+  }
+
   const ctxWindow = new ContextWindow();
   await ctxWindow.init(rm.model.id, modelContextSize(rm.model.id));
 
@@ -167,6 +195,30 @@ export async function chatLoop(
 
       switch (cmdName) {
         case 'help':   printHelp();                                          break;
+        case 'joke': {
+          console.log(`  ${VL}*${R} ${SD}${getJoke()}${R}\n`);
+          break;
+        }
+        case 'wiki': {
+          const content = readWiki();
+          if (!content) {
+            console.log(`  ${RE}x${R} ${SD}No wiki found - put a wiki.md where arc expects it, then try again.${R}\n`);
+            break;
+          }
+          const wikiPipeline = new MarkdownPipeline({ cursor: false, instantCode: true });
+          wikiPipeline.renderInstant(content);
+          console.log(`\n  ${SD}(end of manual - back to the important work)${R}\n`);
+          break;
+        }
+        case 'settings': {
+          // InputBox.read() disables raw mode and pauses stdin before it
+          // resolves, so wake stdin back up for the pane's key listener.
+          process.stdin.resume();
+          await openSettings();
+          printChatHeader(rm, chat.title);
+          console.log(`  ${GR}✓${R} ${SD}Settings closed. Back to business.${R}\n`);
+          break;
+        }
         case 'clear':
           history.length = 0; await ctxWindow.init(rm.model.id, modelContextSize(rm.model.id));
           console.log(`  ${GR}✓${R} ${SD}History cleared${R}\n`);
@@ -263,7 +315,8 @@ export async function chatLoop(
           } else {
             const v = Math.min(2, Math.max(0, t));
             generation.temperature = v;
-            console.log(`  ${GR}✓${R} ${SD}Temperature: ${V}${v}${R}${v !== t ? ` ${SD}(clamped to 0..2)${R}` : ''}\n`);
+            const mood = v < 0.4 ? 'cool and collected' : v > 1.2 ? 'nice and toasty' : 'just right';
+            console.log(`  ${GR}✓${R} ${SD}Temperature: ${V}${v}${R} ${SD}(${mood})${R}${v !== t ? ` ${SD}(clamped to 0..2)${R}` : ''}\n`);
           }
           break;
         }
@@ -275,7 +328,7 @@ export async function chatLoop(
           } else {
             const v = Math.min(1, Math.max(0, p));
             generation.topP = v;
-            console.log(`  ${GR}✓${R} ${SD}Top-p: ${V}${v}${R}${v !== p ? ` ${SD}(clamped to 0..1)${R}` : ''}\n`);
+            console.log(`  ${GR}✓${R} ${SD}Top-p: ${V}${v}${R}${v !== p ? ` ${SD}(clamped to 0..1)${R}` : ''}  ${SD}(tuned)${R}\n`);
           }
           break;
         }
@@ -287,7 +340,7 @@ export async function chatLoop(
           } else {
             const v = Math.trunc(n);
             generation.seed = v;
-            console.log(`  ${GR}✓${R} ${SD}Seed: ${V}${v}${R}\n`);
+            console.log(`  ${GR}✓${R} ${SD}Seed: ${V}${v}${R} ${SD}(same seed, same story)${R}\n`);
           }
           break;
         }
@@ -331,6 +384,9 @@ export async function chatLoop(
           console.log(`  ${V}/bench${R}                  ${SD}run quick benchmark${R}`);
           console.log(`  ${V}/tokens${R}                 ${SD}show context usage${R}`);
           console.log(`  ${V}/retry${R}                  ${SD}resend last message${R}`);
+          console.log(`  ${V}/settings${R}               ${SD}open the settings pane${R}`);
+          console.log(`  ${V}/wiki${R}                   ${SD}read the manual${R}`);
+          console.log(`  ${V}/joke${R}                   ${SD}one free joke${R}`);
           console.log();
           break;
         }

@@ -47,6 +47,7 @@ export interface ArcConfig {
     compact:     boolean;
     show_stats:  boolean;
     show_ctx:    boolean;
+    jokes?:      boolean;   // occasional one-liners at chat startup — off when false
   };
   aliases:   Record<string, string>;
   keybinds:  Record<string, string>;
@@ -67,6 +68,7 @@ const DEFAULT_CONFIG: ArcConfig = {
     compact:     false,
     show_stats:  true,
     show_ctx:    true,
+    jokes:       true,
   },
   aliases:  {},
   keybinds: {
@@ -166,6 +168,7 @@ function serializeTOML(cfg: ArcConfig): string {
   lines.push(`compact    = ${cfg.ui.compact}`);
   lines.push(`show_stats = ${cfg.ui.show_stats}`);
   lines.push(`show_ctx   = ${cfg.ui.show_ctx}`);
+  lines.push(`jokes      = ${cfg.ui.jokes !== false}`);
 
   lines.push('', '[server]');
   lines.push(`port = ${cfg.server.port}`);
@@ -209,7 +212,8 @@ class ConfigManager {
       const src   = fs.readFileSync(CONFIG_FILE, 'utf8');
       const parsed = parseTOML(src);
 
-      // Deep merge parsed over defaults
+      // Deep merge parsed over defaults. This includes ui.jokes: an old config
+      // without the key inherits the default (true), an explicit false sticks.
       this.cfg = {
         defaults: { ...DEFAULT_CONFIG.defaults, ...parsed.defaults },
         ui:       { ...DEFAULT_CONFIG.ui,       ...parsed.ui       },
@@ -311,6 +315,7 @@ export function printConfig(): void {
   console.log(`  compact    = ${b(cfg.ui.compact)}`);
   console.log(`  show_stats = ${b(cfg.ui.show_stats)}`);
   console.log(`  show_ctx   = ${b(cfg.ui.show_ctx)}`);
+  console.log(`  jokes      = ${b(cfg.ui.jokes !== false)}  ${SD}(a little levity at startup)${R}`);
   console.log();
 
   if (Object.keys(cfg.aliases).length > 0) {
@@ -334,8 +339,8 @@ export function printConfig(): void {
   console.log(`  host = ${SD}${cfg.server.host}${R}`);
   console.log();
 
-  console.log(`  ${SD}Edit: ${V}${CONFIG_FILE}${R}`);
-  console.log(`  ${SD}Reset: ${V}arc config --reset${R}`);
+  console.log(`  ${SD}Edit: ${V}${CONFIG_FILE}${R}  ${SD}(tweak away — it's your rig)${R}`);
+  console.log(`  ${SD}Reset: ${V}arc config --reset${R}  ${SD}(if you've gone off the rails)${R}`);
   console.log();
 }
 
@@ -347,7 +352,7 @@ export function handleConfigCmd(args: string[]): void {
   if (subcmd === '--reset' || subcmd === 'reset') {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
     fs.writeFileSync(CONFIG_FILE, serializeTOML(DEFAULT_CONFIG));
-    console.log(`  ${GR}✓${R} Config reset to defaults → ${V}${CONFIG_FILE}${R}\n`);
+    console.log(`  ${GR}✓${R} Config reset to defaults (fresh start, no hard feelings) → ${V}${CONFIG_FILE}${R}\n`);
     return;
   }
 
@@ -356,7 +361,7 @@ export function handleConfigCmd(args: string[]): void {
     const [section, field] = key.includes('.') ? key.split('.', 2) : ['defaults', key];
     config.load();
     config.set(section as keyof ArcConfig, field, val);
-    console.log(`  ${GR}✓${R} ${SD}${section}.${field}${R} = ${V}${val}${R}\n`);
+    console.log(`  ${GR}✓${R} ${SD}${section}.${field}${R} = ${V}${val}${R}  ${SD}(noted)${R}\n`);
     return;
   }
 
@@ -365,9 +370,9 @@ export function handleConfigCmd(args: string[]): void {
     const [section, field] = key.includes('.') ? key.split('.', 2) : ['defaults', key];
     const val = cfg[section]?.[field];
     if (val !== undefined) console.log(`${val}\n`);
-    else console.log(`  ${SD}(not set)${R}\n`);
+    else console.log(`  ${SD}(not set — defaults are holding the fort)${R}\n`);
     return;
   }
 
-  console.log(`  Usage: arc config [show|set <key> <val>|get <key>|reset]\n`);
+  console.log(`  Usage: arc config [show|set <key> <val>|get <key>|reset]  ${SD}(the dials are yours)${R}\n`);
 }

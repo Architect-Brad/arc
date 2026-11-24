@@ -156,16 +156,17 @@ fi
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${V}══════════════════════════════════════════${E}"
-echo -e "  ${G}${B}◈ arc is ready${E} on ${PLATFORM}"
+echo -e "  ${G}${B}◈ arc is ready${E} on ${PLATFORM} - let's make something good"
 echo ""
 echo -e "  ${V}arc${E}              open chat interface"
 echo -e "  ${V}arc --help${E}       all commands"
+echo -e "  ${V}arc wiki${E}         open the manual you actually have"
 echo -e "  ${V}arc --version${E}    version + author"
 echo -e "  ${V}arc serve${E}        web UI at localhost:7070"
 echo -e "  ${V}arc benchmark${E}    test your models"
 echo ""
 if $IS_LINUX; then
-  echo -e "  Then type ${V}ollama${E} — arc intercepts automatically."
+  echo -e "  Then type ${V}ollama${E} - arc intercepts automatically, no fuss."
 fi
 echo -e "${V}══════════════════════════════════════════${E}"
 echo ""

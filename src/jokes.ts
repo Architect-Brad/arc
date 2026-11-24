@@ -1,0 +1,77 @@
+// ---------------------------------------------------------------------------
+// jokes.ts - arc's joke library
+//
+// A little dry humor for the TUI and the /joke command. Jokes are plain
+// ASCII with no styling; the caller decides how to dress them up.
+// The Architect finds these funny. He is rarely wrong about such things.
+// ---------------------------------------------------------------------------
+
+export const JOKES: readonly string[] = [
+  'A hallucination is just a fact that skipped the peer review.',
+  'The model is not wrong. It is just very, very committed to the bit.',
+  'I asked the 3B model for advice. It wrote 2000 words and gave none.',
+  'Local models are like roommates: small, opinionated, always out of VRAM.',
+  'Confidence is not correctness. Ask any LLM or any middle manager.',
+  'The GPU is not running hot. It is enthusiastic about your prompt.\nIt will cool down when the bill arrives.',
+  'Latency is the universe suggesting perhaps you should not have asked.',
+  'Tokens are pocket change: exactly enough until they are suddenly not.',
+  'My context window is small. My attention span is smaller.',
+  'Debugging is staring at code until the code feels awkward.',
+  'The compiler and I have an agreement: it finds bugs, I deny them.',
+  'Every developer has two hobbies: shipping code and explaining the build.',
+  'Two hard problems in CS: cache invalidation and naming things.\nThe third is convincing the LLM it already solved both.',
+  'Markdown rendering is easy. Streaming markdown is a cry for help.',
+  'I wrote a markdown renderer. Now I have two problems and a parser.',
+  'Termux: because needing a terminal should not require a desktop.',
+  'My phone runs a language model. It also runs hot enough to fry an egg.',
+  'llama.cpp turns quantization into a lifestyle. "It fits in 4GB" is a flex.',
+  'Ollama pulls a model like downloading a whole CD, except it is 4GB\nand you do it again on Tuesday.',
+  'The typewriter had one job. We added autocorrect and called it progress.',
+  'A typewriter never hallucinated. It just typed exactly what you asked,\npoorly.',
+  'The Architect does not have bugs. He has undocumented features.',
+  'arc will never be finished. That is not a bug, it is the business model.',
+  'The renderer streams. The picker picks. The Architect overthinks.\nNobody asked him to.',
+  'Easter eggs: the only feature where the docs are the surprise.',
+  'Hooks run once on install, then haunt your shell forever.',
+  'Pressing the wrong key in a TUI is basically a career choice.',
+  'TUIs are GUIs that gave up on mice and went to therapy.',
+  'I do not need a mouse. I need a better memory for keybindings.',
+  'The cursor blinks because it, too, is waiting for a better idea.',
+  'A progress bar is a promise the terminal occasionally keeps.',
+  'The spinner spins so you do not notice the model is still thinking.\nIt is still thinking.',
+  'I said think step by step. It skipped to step 12. Confidently.',
+  'Small models are like interns: fast, cheap, and sure of themselves.',
+  'The cloud has infinite compute. My laptop has a fan and a dream.',
+  'I asked for speed. It gave me a confident wrong answer in 12ms.',
+  'Streaming tokens is great right up until the token is "the".',
+  'Context window full. It now remembers nothing and remains certain.',
+  'RAG is giving the model a cheat sheet and hoping it reads it.',
+  'Fine-tuning is therapy for models. Mostly it changes how they apologize.',
+  'It said "as an AI language model" and I felt personally attacked.',
+  'Temperature 0 is the model saying: I will repeat this confidently.',
+  'Every regex is a small cry for help that occasionally matches.',
+  'I have a TODO list so old it has its own TODO list.',
+  'Code review is two developers negotiating whose taste is objectively right.',
+  'It works on my machine. My machine is Termux on a phone.',
+  'Android: the only OS where closing an app means killing a process.',
+  'Ollama said pull complete. My disk said pull complete?',
+  'Quantization is compression with a thinner wallet.',
+  'The fan spun up. The model is either thinking or mining. Probably thinking.',
+  'Debugging with prints: printf("we made it here"), the last honest line.',
+  'A stack trace is just the model writing its autobiography in errors.',
+  'Tests are like seatbelts: annoying, invisible, deeply missed in a crash.',
+  'The Architect has a TODO to delete the TODO list. It is still there.',
+  'Markdown tables are where parsers go to reconsider their careers.',
+  'Code blocks inside list items: the final boss of markdown rendering.',
+  'I asked it to summarize. It summarized with footnotes. And opinions.',
+  'A model that never says "I don\'t know" is never worth trusting.\nIt will say it twice, though.',
+  'The prompt blinks, patient and judgmental, like a very small cat.',
+  'The best debugging tool is sleep. The second is fresh eyes.\nThe third is restarting.',
+  'My GPU has two modes: silent and concerned.',
+  'I have 4096 tokens left, which is both plenty and never enough.',
+  'It hallucinated a citation. The citation hallucinated a journal.\nWe are all here now.',
+];
+
+export function getJoke(): string {
+  return JOKES[Math.floor(Math.random() * JOKES.length)]!;
+}

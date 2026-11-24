@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ─────────────────────────────────────────────────────────────────────────────
-// index.ts — arc CLI  (v1.9.0 — multi-backend)
+// index.ts — arc CLI  (v1.10.0 — multi-backend)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import * as fs from 'fs';
@@ -20,9 +20,10 @@ import { config, handleConfigCmd } from './config';
 import { benchmarkMode }              from './benchmark';
 import { serveMode }      from './serve';
 import { ansi } from './ansi';
+import { getWikiPath, wikiExists } from './wiki';
 
 const NAME    = 'arc';
-const VERSION = '1.9.0';
+const VERSION = '1.10.0';
 const AUTHOR  = 'The Architect';
 
 const v  = ansi.fg(139,  92, 246);
@@ -65,6 +66,10 @@ ${vl}${b}USAGE${r}
   ${v}arc${r} ${sl}--model${r}   ${cy}<name>${r}          Jump to a specific model
   ${v}arc${r} ${sl}--pipe${r}                    Render markdown from stdin
   ${v}arc${r} ${sl}--render${r}  ${cy}<file>${r}          Render a markdown file
+  ${v}arc${r} ${sl}--wiki${r}                    Open the manual you actually have
+  ${v}arc${r} ${sl}config${r}                    Show or change configuration
+  ${v}arc${r} ${sl}serve${r}                     Web UI at localhost:7070
+  ${v}arc${r} ${sl}benchmark${r}                 Test your models
   ${v}arc${r} ${sl}--install${r}                 Install shell hooks + KDE integration
   ${v}arc${r} ${sl}--uninstall${r}               Remove all arc integrations
   ${v}arc${r} ${sl}--status${r}                  Show installation status
@@ -93,7 +98,10 @@ ${vl}${b}SHELL INTERCEPTION${r}
 ${ln}
 
 ${vl}${b}CHAT COMMANDS${r}
-  ${v}/help${r}   ${v}/clear${r}   ${v}/model${r}   ${v}/copy${r}   ${v}/save${r}   ${v}/exit${r}
+  ${v}/help${r}  ${v}/clear${r}  ${v}/model${r}  ${v}/copy${r}  ${v}/save${r}  ${v}/exit${r}
+  ${v}/settings${r}  ${v}/wiki${r}  ${v}/joke${r}       ${sd}(tune the rig · read the manual · laugh)${r}
+  ${v}/temp${r}  ${v}/top-p${r}  ${v}/seed${r}  ${v}/gen${r}  ${v}/tokens${r}  ${sd}(generation dials)${r}
+  ${v}/config${r}  ${v}/persona${r}  ${v}/typing${r}  ${v}/bench${r}  ${sd}(more knobs, still fun)${r}
 
 ${ln}
 
@@ -211,7 +219,7 @@ if (has('serve') || args[0] === 'serve') {
 if (has('render')) {
   const file = opt('render') ?? args.find(a => !a.startsWith('-'));
   if (!file || !fs.existsSync(file)) {
-    console.error(`arc: file not found: ${file ?? '(none)'}`);
+    console.error(`arc: no such file: ${file ?? '(none)'} - double-check the path and try again`);
     process.exit(1);
   }
   if (hasNativeRenderer) {
@@ -225,6 +233,36 @@ if (has('render')) {
   const sa  = opt('speed');
   const cps = sa ? (speedMap[sa] ?? (parseInt(sa) || 200)) : 200;
   const pipeline = new MarkdownPipeline({ typewriter: { mode: has('instant') ? 'instant' : 'char', cps }, instantCode: true });
+  process.on('SIGINT', () => { pipeline.abort(); process.exit(0); });
+  await pipeline.pipeFrom(fs.createReadStream(file, 'utf8'));
+  process.exit(0);
+}
+
+// ── --wiki ────────────────────────────────────────────────────────────────────
+// Same pipeline as --render, just pointed at arc's own manual.
+if (has('wiki') || args[0] === 'wiki') {
+  if (!wikiExists()) {
+    console.error(`\n${re}  x  No wiki found.${r}`);
+    console.error(`  ${sd}Drop a wiki.md where arc expects it, then try ${v}arc wiki${r}${sd} again.${r}\n`);
+    process.exit(1);
+  }
+  const file = getWikiPath();
+  if (hasNativeRenderer) {
+    await new Promise<void>((resolve) => {
+      const child = spawn(RENDER_BIN, [file], { stdio: ['inherit', 'inherit', 'inherit'] });
+      child.on('exit', code => process.exit(code ?? 0));
+      child.on('error', () => resolve()); // fall through to TS
+    });
+  }
+  const speedMap: Record<string, number> = { slow: 80, normal: 200, fast: 400 };
+  const sa  = opt('speed');
+  const cps = sa ? (speedMap[sa] ?? (parseInt(sa) || 200)) : 200;
+  const pipeline = new MarkdownPipeline({
+    typewriter: { mode: has('instant') ? 'instant' : 'char', cps },
+    instantCode: true,
+    cursor:      !has('no-cursor'),
+    compact:     has('compact'),
+  });
   process.on('SIGINT', () => { pipeline.abort(); process.exit(0); });
   await pipeline.pipeFrom(fs.createReadStream(file, 'utf8'));
   process.exit(0);

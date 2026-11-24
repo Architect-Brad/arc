@@ -52,6 +52,9 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   { name: 'typing',   desc: 'Typewriter mode: /typing char · word · instant' },
   { name: 'config',   desc: 'Show arc config: /config' },
   { name: 'bench',    desc: 'Quick benchmark: /bench' },
+  { name: 'settings', desc: 'Open the settings pane (no wrench required)' },
+  { name: 'wiki',     desc: 'Open the manual you actually have' },
+  { name: 'joke',     desc: 'One free joke (The Architect approves)' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

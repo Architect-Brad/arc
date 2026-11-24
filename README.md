@@ -103,6 +103,7 @@ arc compare                  # two models, one prompt, side by side
 arc serve                    # web UI at http://localhost:7070
 arc benchmark --suite full   # find your fastest model
 arc config                   # show configuration
+arc wiki                     # read the manual you actually have
 arc --help                   # the full list
 ```
 
@@ -175,8 +176,21 @@ tmux, and Termux. The emoji question was settled in v1.4.1. It wasn't pretty.
 /copy              copy last response (wl-copy / xclip / xsel)
 /tokens            session token count
 /chats             recent chat sessions
+/wiki              open this manual (also: arc wiki from a shell)
+/joke              one free joke, no model involved
+/settings          full-screen settings pane
 /exit              leave
 ```
+
+**The new toys.** `/wiki` (or `arc wiki` from a shell) opens the shipped
+`WIKI.md` — a manual that lives in the repo instead of on a wiki nobody can
+find. `/joke` prints one of 60+ locally stored one-liners; the model is not
+consulted, because it already has enough opinions. `/settings` opens a
+full-screen pane in the alternate screen buffer — Up/Down to move, Space/Enter
+to toggle or cycle, `q` or Escape to leave. Every change saves immediately, so
+there is no save button and no pretending. `/help` also got an expansion: it now
+lists slash commands, @-commands, code-block keys, and personas, which is what
+a help command should have been doing all along.
 
 **Generation parameters.** `/temp`, `/top-p`, `/seed` and `/gen` control how
 the *current chat session* samples tokens. Values survive `/retry` and every
@@ -504,6 +518,24 @@ Magnificent, necessary scope creep.
 
 ## Release notes
 
+### v1.10.0
+
+**The manual, the jokes, and the control panel**
+- `arc wiki` / `/wiki` — a 1,400-line manual ships with arc. No pager, no
+  network, no "see the website." It is right there, and it renders through
+  the same engine as everything else
+- `/joke` — 63 original jokes, because a terminal that never laughs is just
+  a keyboard with ambitions. Occasional jokes also appear at chat startup;
+  turn them off with `ui.jokes = false` in config or in settings
+- `/settings` — a full-screen TUI pane. Toggle typewriter, compact mode,
+  stats, context bar, and jokes; cycle speed and generation defaults. Nine
+  rows, arrow keys, space to change, `q` to leave. Everything saves as you
+  go, which is more than we can say for most of our life choices
+- Expanded `/help` — grouped, scannable, and warmer. The old help was a list;
+  this one has sections and opinions
+- The overall tone is lighter. The Architect still has opinions, but now
+  delivers them with a small smile
+
 ### v1.9.0
 
 **Backends reworked**
@@ -671,7 +703,7 @@ being stubs. Mostly.
 
 ---
 
-**arc v1.9.0 · Linux · KDE · Android (Termux) · Built by The Architect**
+**arc v1.10.0 · Linux · KDE · Android (Termux) · Built by The Architect**
 
 *The input box is fixed.*
 *Please stop finding bugs in it.*
