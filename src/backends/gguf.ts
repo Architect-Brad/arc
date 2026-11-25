@@ -20,6 +20,18 @@ export const DEFAULT_MODEL_DIRS = [
 export const expandHome = (p: string): string =>
   p.startsWith('~') ? path.join(os.homedir(), p.slice(1)) : p;
 
+/**
+ * Files that look like .gguf models but cannot be loaded as one.
+ *
+ * llama.cpp ships tokenizer-only sidekicks named `ggml-vocab-*.gguf`: a few MB
+ * of vocabulary, no weights. They share the model picker's file extension, but
+ * asking a server to load one is a conversation with a dictionary. Skip them.
+ * Also drop half-downloaded `.tmp`/`.part` leftovers; everything else stays.
+ */
+function isNonModelArtifact(name: string): boolean {
+  return /^ggml-vocab-/i.test(name) || /\.(tmp|part)$/i.test(name);
+}
+
 export function findGgufFiles(dirs: string[], maxDepth = 2): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -33,7 +45,7 @@ export function findGgufFiles(dirs: string[], maxDepth = 2): string[] {
       if (e.isDirectory()) {
         if (e.name.startsWith('.') || e.name === 'node_modules') continue;
         scan(full, depth + 1);
-      } else if (/\.gguf$/i.test(e.name)) {
+      } else if (/\.gguf$/i.test(e.name) && !isNonModelArtifact(e.name)) {
         try {
           const st = fs.statSync(full);
           if (st.size > 0) out.push(full);

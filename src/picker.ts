@@ -7,7 +7,7 @@
 import { registry, ResolvedModel } from './backends/registry';
 import { GLYPHS }                   from './logos';
 import { Backend }                 from './backends/base';
-import { ansi }                    from './ansi';
+import { ansi, ansiChars, visibleLength } from './ansi';
 
 const v   = ansi.fg(139,  92, 246);
 const vl  = ansi.fg(167, 139, 250);
@@ -30,10 +30,56 @@ function backendColor(b: Backend): string {
   return ansi.fg(R, G, Bl);
 }
 
-function clearLines(n: number) {
-  for (let i = 0; i < n; i++) {
-    process.stdout.write(ansi.up(1) + ansi.col(1) + ansi.clearLine);
+// ── Redraw invariant (same deal as inputbox.ts) ───────────────────────────────
+// After every render the cursor is at col 1 of the row just below the picker.
+// A redraw goes up exactly `drawn` rows in ONE write, then paints each row as
+// `clearLine + content + '\n'`. No save/restore, no drift, no per-line writes.
+//
+// The old code nudged up one row per line in a separate write and wrote bare
+// content. On narrow terminals (Termux, looking at you) a single long line
+// wraps to two physical rows, so "up 1" landed mid-block and the top rows
+// survived the wipe. Every arrow press bookmarked another copy of the prompt.
+// Clipping to the real width keeps one logical line == one physical row.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function clipLine(line: string, max: number): string {
+  if (visibleLength(line) <= max) return line;
+  let out = '';
+  let used = 0;
+  for (const part of ansiChars(line)) {
+    // Color/bold/dim escapes are free; only glyphs spend columns.
+    if (part.charCodeAt(0) === 0x1b) { out += part; continue; }
+    for (const ch of part) {
+      if (used >= max) return out + r;   // don't leak color into the next row
+      out += ch;
+      used++;
+    }
   }
+  return out;
+}
+
+function render(lines: string[], drawn: number): number {
+  const w   = Math.max(1, W());
+  const buf = lines.map(l => clipLine(l, w));
+  let out = '';
+  if (drawn > 0) {
+    // Wipe the whole old block, not just the rows the new one happens to
+    // cover; a filter can shrink the list, and the leftover tail would
+    // otherwise sit there like an unpaid bill.
+    out += ansi.up(drawn) + ansi.col(1);
+    for (let i = 0; i < drawn; i++) out += ansi.clearLine + '\n';
+    out += ansi.up(drawn) + ansi.col(1);
+  }
+  for (const l of buf) out += ansi.clearLine + l + '\n';
+  process.stdout.write(out);            // one syscall, one atomic repaint
+  return buf.length;
+}
+
+function erase(drawn: number): void {
+  if (drawn <= 0) return;
+  let out = ansi.up(drawn) + ansi.col(1);
+  for (let i = 0; i < drawn; i++) out += ansi.clearLine + '\n';
+  process.stdout.write(out + ansi.showCursor);
 }
 
 function rawMode(on: boolean) {
@@ -72,8 +118,7 @@ async function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
 // LEVEL 1 — Backend picker (shown when no backend is locked)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function drawBackendList(backends: Backend[], sel: number, headerLines: number) {
-  const w = W();
+function drawBackendList(backends: Backend[], sel: number, drawn: number): number {
   const lines: string[] = [];
 
   lines.push(`${vl}  Choose a provider  ${sd}(↑↓ · Enter · q quit)${r}`);
@@ -94,10 +139,7 @@ function drawBackendList(backends: Backend[], sel: number, headerLines: number) 
   lines.push('');
   lines.push(`  ${sd}↵ select   q quit${r}`);
 
-  // Redraw
-  if (headerLines > 0) clearLines(lines.length);
-  lines.forEach(l => process.stdout.write(l + '\n'));
-  return lines.length;
+  return render(lines, drawn);
 }
 
 export async function pickBackend(onlyFrom?: Backend[]): Promise<Backend | null> {
@@ -139,7 +181,9 @@ export async function pickBackend(onlyFrom?: Backend[]): Promise<Backend | null>
     const cleanup = () => {
       rawMode(false);
       process.stdin.removeListener('data', onKey);
-      process.stdout.write(ansi.showCursor);
+      // Take the list with us. Otherwise the next level (or the next lap
+      // around the Esc loop) parks a fresh header on top of this one.
+      erase(drawn);
     };
 
     process.stdin.on('data', onKey);
@@ -209,9 +253,7 @@ function drawModelList(
   lines.push('');
   lines.push(`  ${sd}↵ select   Esc back   q quit${r}`);
 
-  if (drawn > 0) clearLines(drawn);
-  lines.forEach(l => process.stdout.write(l + '\n'));
-  return lines.length;
+  return render(lines, drawn);
 }
 
 export async function pickModel(
@@ -288,7 +330,9 @@ export async function pickModel(
     const cleanup = () => {
       rawMode(false);
       process.stdin.removeListener('data', onKey);
-      process.stdout.write(ansi.showCursor);
+      // Take the list with us. Otherwise the next level (or the next lap
+      // around the Esc loop) parks a fresh header on top of this one.
+      erase(drawn);
     };
 
     process.stdin.on('data', onKey);

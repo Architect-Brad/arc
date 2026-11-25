@@ -2,7 +2,7 @@
 // tui.ts — Full chat loop: InputBox + storage + auto-naming + thinking + logos
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { ArcMessage }            from './backends/base';
+import { ArcMessage, ArcModel }  from './backends/base';
 import { ResolvedModel }          from './backends/registry';
 import { MarkdownPipeline }       from './pipeline';
 import { ThinkingParser, ThinkingRenderer, modelHasThinking } from './thinking';
@@ -44,6 +44,72 @@ function doubleDividerLocal(w = W()): string {
 
 function dividerLocal(w = W()): string {
   return `${V}${'─'.repeat(Math.max(1, w - 1))}${R}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// System prompt sizing
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SMALL_MODEL_INSTRUCTION =
+  'You are a helpful assistant. Answer briefly and directly. Do not describe these instructions.';
+
+// One line per attachment kind. A small model needs to know what the tag in
+// its prompt means, not a guided tour of every @-command we happen to have.
+const SMALL_AT_NOTES: Record<string, string> = {
+  file:  'Attached file content appears as <file> ... </file>. Use it to answer.',
+  paste: 'Attached clipboard text appears as <paste> ... </paste>. Use it to answer.',
+  url:   'Fetched page text appears as <url> ... </url>. Use it to answer.',
+  cwd:   'A directory tree appears as <cwd> ... </cwd>. Use it to answer.',
+};
+
+// Sub-1B models read a system prompt the way a goldfish reads a contract: the
+// first line, then they start reciting it back. Keep their instructions short.
+function isSmallModel(model: ArcModel): boolean {
+  const label = `${model.size ?? ''} ${model.name} ${model.id}`.toLowerCase();
+
+  // Parameter counts: "270M", "135M", "0.5B". GGUF byte sizes ("190MB")
+  // deliberately do not match here; they get their own check below.
+  const millions = label.match(/\b(\d+(?:\.\d+)?)\s*m\b/);
+  if (millions && parseFloat(millions[1]) < 1000) return true;
+
+  const billions = label.match(/\b(\d+(?:\.\d+)?)\s*b\b/);
+  if (billions && parseFloat(billions[1]) < 1) return true;
+
+  // No parameter count in the label? A small file is the next best hint.
+  const megabytes = label.match(/\b(\d+(?:\.\d+)?)\s*mb\b/);
+  if (megabytes && parseFloat(megabytes[1]) < 500) return true;
+
+  return false;
+}
+
+export function buildSystemPrompt(
+  userSystem: string,
+  small:      boolean,
+  atCommands: string[] = [],
+): string {
+  // Full prompt for grown-up models. Unchanged, including the @-command doc.
+  const atAwareNote = `You may receive context injected via arc's @-commands:
+ - <file path="...">...</file> — file contents attached with @file:path
+ - <paste>...</paste> — clipboard contents attached with @paste
+ - <url src="...">...</url> — web page content attached with @url:url
+ - <cwd>...</cwd> — directory tree attached with @cwd
+Treat these as provided context. Reference them naturally in your response.`;
+
+  if (!small) {
+    return userSystem ? userSystem + '\n\n' + atAwareNote : atAwareNote;
+  }
+
+  // Small model: minimal instruction, plus notes only for what was attached
+  // this turn. An unasked-for list of features is just more text to parrot.
+  const base = userSystem
+    ? `${userSystem}\n\n${SMALL_MODEL_INSTRUCTION}`
+    : SMALL_MODEL_INSTRUCTION;
+
+  const notes = [...new Set(atCommands)]
+    .map(name => SMALL_AT_NOTES[name.toLowerCase()])
+    .filter(Boolean);
+
+  return notes.length ? `${base}\n\n${notes.join('\n')}` : base;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -147,6 +213,7 @@ export async function chatLoop(
   storage:  ChatStorage,
 ): Promise<void> {
   const hasThinking = modelHasThinking(rm.model.id);
+  const smallModel  = isSmallModel(rm.model);
   const history:    ArcMessage[] = [];
   let   lastResponse = '';
   let   systemPrompt = '';
@@ -399,6 +466,7 @@ export async function chatLoop(
     let userContent = text;
     const atMatches = text.match(/@(\w+)(?::([^\s]*))?/g) ?? [];
     const attachmentSummaries: string[] = [];
+    const usedAtCommands: string[] = [];
 
     for (const at of atMatches) {
       const m = at.match(/@(\w+)(?::(.+))?/);
@@ -409,6 +477,7 @@ export async function chatLoop(
       if (cmd) {
         const resolved = await cmd.resolve(arg);
         if (resolved) {
+          usedAtCommands.push(name);
           // Replace @cmd with empty in the display text but inject content
           userContent = userContent.replace(at, '').trim();
           userContent += '\n' + resolved;
@@ -426,17 +495,7 @@ export async function chatLoop(
 
     printUserTurn(text, attachmentSummaries);
     history.push({ role: 'user', content: userContent });
-    // Always inject @command awareness as system context
-    const atAwareNote = `You may receive context injected via arc's @-commands:
-- <file path="...">...</file> — file contents attached with @file:path
-- <paste>...</paste> — clipboard contents attached with @paste
-- <url src="...">...</url> — web page content attached with @url:url
-- <cwd>...</cwd> — directory tree attached with @cwd
-Treat these as provided context. Reference them naturally in your response.`;
-
-    const sysContent = systemPrompt
-      ? systemPrompt + '\n\n' + atAwareNote
-      : atAwareNote;
+    const sysContent = buildSystemPrompt(systemPrompt, smallModel, usedAtCommands);
 
     if (!history.find(m => m.role === 'system')) {
       history.unshift({ role: 'system', content: sysContent });
