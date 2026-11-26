@@ -198,27 +198,46 @@ export class LlamaCppBackend implements Backend {
     this.killSpawned(); // different model — restart
     const port = await freePort();
 
-    this.spawned = spawn(bin, ['-m', gguf, '--host', '127.0.0.1', '--port', String(port)], {
-      stdio: 'ignore',
+    // Keep stderr: llama-server prints the *reason* a model failed to load
+    // there (unsupported quant, bad header, template errors, ...). Throwing
+    // it away turns every failure into a useless "exited with code 1".
+    let stderr = '';
+    const child = spawn(bin, ['-m', gguf, '--host', '127.0.0.1', '--port', String(port)], {
+      stdio: ['ignore', 'ignore', 'pipe'],
       env:   { ...process.env },
     });
-    this.spawned.on('error', () => { /* surfaced via health timeout below */ });
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+      if (stderr.length > 8192) stderr = stderr.slice(-8192); // last lines are the useful ones
+    });
+    const spawnError: { err: Error | null } = { err: null };
+    child.on('error', (e) => { spawnError.err = e; });
+    this.spawned = child;
     this.spawnedModel = gguf;
     this.spawnedPort  = port;
+
+    const detail = () => {
+      const lines = stderr.split('\n').map(l => l.trim()).filter(Boolean).slice(-6);
+      return lines.length ? `\n    ${lines.join('\n    ')}` : '';
+    };
 
     // Large models take a while to load — poll /health for up to 180s
     const deadline = Date.now() + 180_000;
     while (Date.now() < deadline) {
-      if (this.spawned.exitCode !== null) {
-        const code = this.spawned.exitCode;
+      if (spawnError.err) {
+        const msg = spawnError.err.message;
         this.killSpawned();
-        throw new Error(`llama-server exited with code ${code} while loading ${path.basename(gguf)}`);
+        throw new Error(`could not start llama-server: ${msg}`);
+      }
+      if (child.exitCode !== null) {
+        this.killSpawned();
+        throw new Error(`llama-server exited with code ${child.exitCode} while loading ${path.basename(gguf)}${detail()}`);
       }
       if (await this.serverHealthy('localhost', port)) return port;
       await sleep(500);
     }
     this.killSpawned();
-    throw new Error(`llama-server did not become ready within 180s while loading ${path.basename(gguf)}`);
+    throw new Error(`llama-server did not become ready within 180s while loading ${path.basename(gguf)}${detail()}`);
   }
 
   private killSpawned(): void {
