@@ -56,6 +56,16 @@ and nobody stops you.
 models* — Ollama, `llama-server`, or `llama-cli`. arc renders and manages
 those; it does not ship a model. Pick a backend, then install arc.
 
+**One-line install (Linux / Termux):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Architect-Brad/arc/master/install-remote.sh | bash
+```
+
+Yes, it pipes a script from the internet into bash. So does half of Termux.
+Read it first if you're that kind of person. It clones into lowercase `~/arc`
+(the capital-A path was a real bug that broke people), then runs the same
+`install.sh` as the manual steps below. Re-run it any time to update.
+
 **Linux / KDE:**
 ```bash
 git clone https://github.com/Architect-Brad/arc.git arc
@@ -100,7 +110,17 @@ arc
 The `rust` package is optional but gives you the native core.
 First Rust compile takes ~5 minutes on Android. Worth it.
 
-To update: `bash install.sh` — idempotent, replaces hooks, recompiles core.
+**npm (if you already live in npm):**
+```bash
+npm install -g @architect-brad/arc
+```
+The npm package omits the native Rust/C++ binaries, so arc falls back to the
+TypeScript renderer. That renderer works fine -- you just lose the native
+speed path. Want the native cores? Use the git install above.
+
+To update: re-run the one-line curl installer (it pulls and re-runs
+`install.sh`), or do it by hand: `cd ~/arc && git pull && bash install.sh`.
+Idempotent, replaces hooks, recompiles core.
 
 **iOS:**
 

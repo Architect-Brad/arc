@@ -1,5 +1,5 @@
 {
-  "name": "arc",
+  "name": "@architect-brad/arc",
   "version": "1.10.0",
   "description": "Streaming markdown renderer and LLM chat interface \u2014 by The Architect",
   "author": "The Architect",
@@ -7,10 +7,32 @@
   "bin": {
     "arc": "dist/index.js"
   },
+  "files": [
+    "dist/",
+    "!dist/test-webui.*",
+    "WIKI.md",
+    "README.md",
+    "LICENSE",
+    "assets/",
+    "install.sh"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "ts-node src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Architect-Brad/arc.git"
+  },
+  "homepage": "https://github.com/Architect-Brad/arc#readme",
+  "bugs": {
+    "url": "https://github.com/Architect-Brad/arc/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "sql.js": "^1.14.1"
